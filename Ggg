@@ -1,0 +1,141 @@
+import timeit
+import json
+from collections import deque
+import random
+import sys
+
+# Увеличим рекурсивный лимит для сложных операций, если потребуется
+sys.setrecursionlimit(2000)
+
+# Константы для тестирования
+SETUP_CODE_DICT = "d = {i: i for i in range(N)}"
+SETUP_CODE_DEQUE = "from collections import deque; d = deque(range(N))"
+N = 100000  # Размер структуры данных для тестирования
+REPEATS = 100 # Количество повторений для timeit
+print(f"--- DICT Performance Analysis (N={N}, Repeats={REPEATS}) ---")
+
+# 1. Доступ (Access)
+time_access = timeit.timeit(
+    "d[N // 2]", setup=SETUP_CODE_DICT, globals=globals(), number=REPEATS
+)
+print(f"1. Доступ по ключу (d[k]): {time_access / REPEATS:.6f} сек/операция")
+
+# 2. Добавление (Insertion)
+time_insert = timeit.timeit(
+    "d[N + 1] = N + 1", setup=SETUP_CODE_DICT, globals=globals(), number=REPEATS
+)
+print(f"2. Добавление (d[k]=v): {time_insert / REPEATS:.6f} сек/операция")
+
+# 3. Удаление (Deletion)
+time_delete = timeit.timeit(
+    "del d[N // 2]", setup=SETUP_CODE_DICT, globals=globals(), number=REPEATS
+)
+print(f"3. Удаление (del d[k]): {time_delete / REPEATS:.6f} сек/операция")
+
+# 4. Поиск (Search)
+time_search = timeit.timeit(
+    "(N // 2) in d", setup=SETUP_CODE_DICT, globals=globals(), number=REPEATS
+)
+print(f"4. Поиск ключа (k in d): {time_search / REPEATS:.6f} сек/операция")
+
+# 5. Сортировка (Sorting keys)
+time_sort = timeit.timeit(
+    "sorted(d.keys())", setup=SETUP_CODE_DICT, globals=globals(), number=REPEATS
+)
+print(f"5. Сортировка ключей: {time_sort / REPEATS:.6f} сек/операция")
+
+print(f"\n--- DEQUE Performance Analysis (N={N}, Repeats={REPEATS}) ---")
+
+# 1. Доступ (Access) - Медленно!
+time_access_dq = timeit.timeit(
+    "d[N // 2]", setup=SETUP_CODE_DEQUE, globals=globals(), number=REPEATS
+)
+print(f"1. Доступ по индексу (d[i]): {time_access_dq / REPEATS:.6f} сек/операция")
+
+# 2. Добавление справа (Insertion Right) - Быстро!
+time_append = timeit.timeit(
+    "d.append(N + 1)", setup=SETUP_CODE_DEQUE, globals=globals(), number=REPEATS
+)
+print(f"2. Добавление справа (append): {time_append / REPEATS:.6f} сек/операция")
+
+# 3. Добавление слева (Insertion Left) - Быстро!
+time_appendleft = timeit.timeit(
+    "d.appendleft(N + 1)", setup=SETUP_CODE_DEQUE, globals=globals(), number=REPEATS
+)
+print(f"3. Добавление слева (appendleft): {time_appendleft / REPEATS:.6f} сек/операция")
+
+# 4. Удаление справа (Deletion Right) - Быстро!
+time_pop = timeit.timeit(
+    "d.pop()", setup=SETUP_CODE_DEQUE, globals=globals(), number=REPEATS
+)
+print(f"4. Удаление справа (pop): {time_pop / REPEATS:.6f} сек/операция")
+
+# 5. Удаление слева (Deletion Left) - Быстро!
+time_popleft = timeit.timeit(
+    "d.popleft()", setup=SETUP_CODE_DEQUE, globals=globals(), number=REPEATS
+)
+print(f"5. Удаление слева (popleft): {time_popleft / REPEATS:.6f} сек/операция")
+
+# 6. Поиск (Search) - Медленно!
+time_search_dq = timeit.timeit(
+    "(N // 2) in d", setup=SETUP_CODE_DEQUE, globals=globals(), number=REPEATS
+)
+print(f"6. Поиск значения (v in d): {time_search_dq / REPEATS:.6f} сек/операция")
+FILE_DICT = "data_dict.json"
+FILE_DEQUE = "data_deque.json"
+
+def save_data(data, filename):
+    """Сохраняет данные в файл JSON."""
+    try:
+        # Если это deque, преобразуем в список
+        if isinstance(data, deque):
+            data_to_save = list(data)
+        else:
+            data_to_save = data
+
+        with open(filename, 'w') as f:
+            json.dump(data_to_save, f, indent=4)
+        print(f"\nДанные успешно сохранены в {filename}")
+    except Exception as e:
+        print(f"Ошибка при сохранении: {e}")
+
+def load_data(filename, structure_type):
+    """Загружает данные из файла JSON и преобразует в нужную структуру."""
+    try:
+        with open(filename, 'r') as f:
+            data = json.load(f)
+
+        if structure_type == 'dict':
+            return data
+        elif structure_type == 'deque':
+            return deque(data)
+        else:
+            raise ValueError("Неизвестный тип структуры")
+    except FileNotFoundError:
+        print(f"Файл {filename} не найден.")
+        return None
+    except Exception as e:
+        print(f"Ошибка при загрузке: {e}")
+        return None
+
+# Инициализация структур для сохранения
+test_dict = {f"key_{i}": i for i in range(5)}
+test_deque = deque([10, 20, 30, 40, 50])
+
+# --- Проверка сохранения ---
+save_data(test_dict, FILE_DICT)
+save_data(test_deque, FILE_DEQUE)
+
+# --- Проверка загрузки ---
+loaded_dict = load_data(FILE_DICT, 'dict')
+loaded_deque = load_data(FILE_DEQUE, 'deque')
+
+print(f"Загруженный dict: {type(loaded_dict)}, Содержимое: {loaded_dict}")
+print(f"Загруженный deque: {type(loaded_deque)}, Содержимое: {loaded_deque}")
+
+# Проверка работоспособности загруженных структур
+if loaded_dict:
+    print(f"Проверка dict: loaded_dict['key_2'] = {loaded_dict['key_2']}")
+if loaded_deque:
+    loaded_deque.append(99)
+    print(f"Проверка deque (append): {loaded_deque}")
